@@ -33,28 +33,40 @@ jobs:
       - name: Create Bridge Script
         run: |
           cat <<EOF > bridge.py
-          import os, threading, gradio as gr, time
-          def run_app(): 
-              os.system("python app.py")
+          import subprocess
+          import gradio as gr
+          import time
+          import sys
+          import os
+
+          print("--- Starting Flask Traffic Generator ---")
+          # Run Flask in the background
+          proc = subprocess.Popen([sys.executable, "app.py"])
+
+          # Wait for Flask to boot on port 5000
+          print("Waiting 15 seconds for local server...")
+          time.sleep(15)
+
+          print("--- Launching Gradio Public Tunnel ---")
+          with gr.Blocks(title="Traffic Generator Dashboard") as demo:
+              gr.Markdown("## 🚀 Web Traffic Generator Gateway")
+              gr.Markdown("If you see 'Refused to connect', please wait 10 seconds and refresh.")
+              gr.HTML('<iframe src="http://localhost:5000" style="width:100%; height:85vh; border:none;"></iframe>')
           
-          # Start the traffic generator in a background thread
-          threading.Thread(target=run_app, daemon=True).start()
-          
-          # Wait for Flask to initialize
-          time.sleep(10)
-          
-          # Create the Gradio interface
-          with gr.Blocks(title="Traffic Gen Dashboard") as demo:
-              gr.Markdown("### 🚀 Traffic Generator is running")
-              gr.HTML('<iframe src="http://localhost:5000" style="width:100%; height:90vh; border:none;"></iframe>')
-          
-          # Launch Gradio with a public URL
-          demo.launch(share=True)
+          # launch(share=True) creates the .gradio.live link
+          demo.launch(share=True, inline=False)
+
+          # Keep script alive while the timeout command handles the duration
+          try:
+              while True:
+                  time.sleep(10)
+          except KeyboardInterrupt:
+              proc.terminate()
           EOF
 
       - name: Launch with Duration
         run: |
-          # Convert input string to actual seconds for the timeout command
+          # Convert input string to actual seconds
           DURATION_INPUT="${{ github.event.inputs.duration }}"
           
           if [ "$DURATION_INPUT" == "1h" ]; then
@@ -62,11 +74,11 @@ jobs:
           elif [ "$DURATION_INPUT" == "3h" ]; then
             SECONDS=10800
           else
-            # 5 hours (18000) + 40 minutes (2400) = 20400 seconds
+            # 5h 40m = 20400 seconds
             SECONDS=20400
           fi
           
-          echo "Starting application for $DURATION_INPUT ($SECONDS seconds)..."
+          echo "Workflow will run for $DURATION_INPUT ($SECONDS seconds)."
           
-          # Use the 'timeout' command to kill the process after the chosen time
-          timeout $SECONDS python bridge.py || echo "Time limit reached. Shutting down."
+          # Execute the bridge with a system timeout
+          timeout $SECONDS python bridge.py || echo "Duration limit reached. Shutting down."
