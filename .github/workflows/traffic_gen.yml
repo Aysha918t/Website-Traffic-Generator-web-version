@@ -39,24 +39,23 @@ jobs:
           import sys
           import os
 
-          print("--- Starting Flask Traffic Generator ---")
-          # Run Flask in the background
-          proc = subprocess.Popen([sys.executable, "app.py"])
+          # Force flush all prints
+          print("--- Starting Flask Traffic Generator ---", flush=True)
+          
+          # Run Flask in the background with unbuffered output
+          proc = subprocess.Popen([sys.executable, "-u", "app.py"])
 
-          # Wait for Flask to boot on port 5000
-          print("Waiting 15 seconds for local server...")
+          print("Waiting 15 seconds for local server to stabilize...", flush=True)
           time.sleep(15)
 
-          print("--- Launching Gradio Public Tunnel ---")
+          print("--- Launching Gradio Public Tunnel ---", flush=True)
           with gr.Blocks(title="Traffic Generator Dashboard") as demo:
               gr.Markdown("## 🚀 Web Traffic Generator Gateway")
-              gr.Markdown("If you see 'Refused to connect', please wait 10 seconds and refresh.")
               gr.HTML('<iframe src="http://localhost:5000" style="width:100%; height:85vh; border:none;"></iframe>')
           
-          # launch(share=True) creates the .gradio.live link
-          demo.launch(share=True, inline=False)
+          # Use server_name="0.0.0.0" and share=True
+          demo.launch(share=True, inline=False, server_name="0.0.0.0")
 
-          # Keep script alive while the timeout command handles the duration
           try:
               while True:
                   time.sleep(10)
@@ -66,7 +65,6 @@ jobs:
 
       - name: Launch with Duration
         run: |
-          # Convert input string to actual seconds
           DURATION_INPUT="${{ github.event.inputs.duration }}"
           
           if [ "$DURATION_INPUT" == "1h" ]; then
@@ -74,11 +72,10 @@ jobs:
           elif [ "$DURATION_INPUT" == "3h" ]; then
             SECONDS=10800
           else
-            # 5h 40m = 20400 seconds
             SECONDS=20400
           fi
           
           echo "Workflow will run for $DURATION_INPUT ($SECONDS seconds)."
           
-          # Execute the bridge with a system timeout
-          timeout $SECONDS python bridge.py || echo "Duration limit reached. Shutting down."
+          # Use python -u for unbuffered output so you see the URL immediately
+          timeout $SECONDS python -u bridge.py || echo "Duration limit reached. Shutting down."
