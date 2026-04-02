@@ -1,0 +1,37 @@
+name: Taher IT - 200GB Hyper-Scale Engine
+on:
+  workflow_dispatch: # Allows manual start from the Actions tab
+
+jobs:
+  run-mega-engine:
+    # --- DEPOT 64-CORE RUNNER ---
+    # Providing 64 vCPUs and 256GB RAM
+    runs-on: depot-ubuntu-24.04-64
+    
+    # 5 Hours 40 Minutes = 340 Minutes
+    timeout-minutes: 340 
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install High-Performance Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright gradio psutil fake-useragent plotly
+          playwright install chromium
+          playwright install-deps
+
+      - name: Launch Hyper-Engine with Gradio Dashboard
+        env:
+          # Use a random port or standard Gradio port
+          GRADIO_SERVER_PORT: 7860
+        run: |
+          # Ensure your python file is named 'traffic_engine.py'
+          # This will run until the 340-minute timeout is reached
+          python traffic_engine.py
