@@ -9,7 +9,7 @@ jobs:
     runs-on: depot-ubuntu-24.04-64
     
     # 5 Hours 40 Minutes = 340 Minutes
-    timeout-minutes: 340 
+    timeout-minutes: 10 
 
     steps:
       - name: Checkout Repository
